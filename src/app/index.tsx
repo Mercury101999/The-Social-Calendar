@@ -1,98 +1,140 @@
-import * as Device from "expo-device";
-import { Platform, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Calendar } from "react-native-calendars";
+import { supabase } from "../../lib/supabase";
 
-import { AnimatedIcon } from "@/components/animated-icon";
-import { HintRow } from "@/components/hint-row";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { WebBadge } from "@/components/web-badge";
-import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
+type MyEvent = {
+  id: string;
+  title: string;
+  starts_at: string;
+  location: string | null;
+};
 
-function getDevMenuHint() {
-  if (Platform.OS === "web") {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === "android" ? "cmd+m (or ctrl+m)" : "cmd+d";
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
+function toDateKey(iso: string) {
+  const d = new Date(iso);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
-export default function HomeScreen() {
+export default function MyCalendarScreen() {
+  const [events, setEvents] = useState<MyEvent[]>([]);
+  const [selected, setSelected] = useState(toDateKey(new Date().toISOString()));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("rsvps")
+      .select("events(id, title, starts_at, location)")
+      .eq("user_id", userData.user?.id)
+      .eq("status", "going");
+
+    if (error) setError(error.message);
+    else setEvents((data ?? []).map((r: any) => r.events).filter(Boolean));
+    setLoading(false);
+  }, []);
+
+  // Reload every time the tab is opened, so new RSVPs show up
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const marked: Record<string, any> = {};
+  events.forEach((e) => {
+    marked[toDateKey(e.starts_at)] = { marked: true, dotColor: "#c2410c" };
+  });
+  marked[selected] = {
+    ...(marked[selected] ?? {}),
+    selected: true,
+    selectedColor: "#1e3a8a",
+  };
+
+  const dayEvents = events.filter((e) => toDateKey(e.starts_at) === selected);
+
+  if (loading)
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  if (error)
+    return (
+      <View style={styles.center}>
+        <Text>Couldn't load your calendar: {error}</Text>
+      </View>
+    );
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcom to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === "web" && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <View style={styles.container}>
+      <Text style={styles.heading}>My Calendar</Text>
+      <Calendar
+        markedDates={marked}
+        onDayPress={(d) => setSelected(d.dateString)}
+      />
+      <FlatList
+        contentContainerStyle={styles.list}
+        data={dayEvents}
+        keyExtractor={(e) => e.id}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {events.length === 0
+              ? "You haven't RSVP'd to anything yet. Find an event on the home tab!"
+              : "Nothing planned this day."}
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.meta}>
+              {new Date(item.starts_at).toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </Text>
+            {item.location && <Text style={styles.meta}>{item.location}</Text>}
+          </View>
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    flexDirection: "row",
+  container: { flex: 1, paddingTop: 60, backgroundColor: "#fff" },
+  heading: {
+    fontSize: 24,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
-  safeArea: {
+  center: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
     alignItems: "center",
     justifyContent: "center",
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    padding: 24,
   },
-  title: {
-    textAlign: "center",
+  list: { padding: 16, gap: 10 },
+  card: {
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#eee",
+    gap: 2,
   },
-  code: {
-    textTransform: "uppercase",
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: "stretch",
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  title: { fontSize: 16, fontWeight: "700" },
+  meta: { fontSize: 14, color: "#555" },
+  empty: { textAlign: "center", color: "#777", marginTop: 16 },
 });
