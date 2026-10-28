@@ -1,56 +1,49 @@
-# Welcome to your Expo app 👋
+# The Social Calendar
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A lively, seasonal social calendar that gets people out with friends, on their own, and meeting someone new. It isn't just another calendar app.
 
-## Get started
+## Features (planned)
+- Sign-up that asks for your likes, dislikes, and favorite seasonal activities
+- A personal calendar with a theme for each season, plus the weather
+- Hand-curated events with RSVPs and monthly topics (local happenings, movies, TV, anime)
+- Friend levels (Connection, Friend, Best Friend) that control who can see your calendar
+- Outing suggestions based on interests you share
+- Reminders to get out, like "Don't let Spring pass you by"
+- Private event photos, a seasonal memories gallery, and end-of-season recaps
 
-1. Install dependencies
+## Tech stack
+| Layer | Choice |
+| --- | --- |
+| Mobile app | React Native, Expo, Expo Router, TypeScript |
+| Backend | Supabase (Auth, Postgres, Storage, Edge Functions) |
+| Security | Postgres row-level security based on friend level |
+| Builds | EAS Build / EAS Update |
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+## Getting started
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
+Scan the QR code with Expo Go (Android) or the Camera app (iOS).
+On Windows PowerShell, use `npx.cmd` if script execution is blocked.
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+## Environment variables
+Copy `.env.example` to `.env` and fill in your Supabase project values.
+Never commit `.env`, and never put the Supabase service-role key in the app.
 
-### Other setup steps
+## Project docs
+- [NOTES.md](NOTES.md) for decisions and open questions
+- [CHANGELOG.md](CHANGELOG.md) for what changed and when
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Roadmap
+- [x] Phase 0: Setup
+- [ ] Phase 1: One journey (sign in, find an event, RSVP, see it on the calendar)
+- [ ] Phase 2: Protect the data (security rules, storage permissions, deletion)
+- [ ] Phase 3: Memories, seasons, and themes
+- [ ] Phase 4: Social layer (friend levels, privacy, suggestions)
+- [ ] Phase 5: Quality (tests, CI, error states)
+- [ ] Phase 6: Pilot
+- [ ] Phase 7: App Store and Google Play launch
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## License
+MIT
