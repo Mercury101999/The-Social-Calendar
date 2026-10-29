@@ -4,11 +4,13 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { Calendar } from 'react-native-calendars';
 import { supabase } from '../../lib/supabase';
 import { getSeason, SeasonThemes } from '@/constants/seasons';
+import DayPlanner from '@/components/day-planner';
 
 type MyEvent = {
   id: string;
   title: string;
   starts_at: string;
+  ends_at: string | null;
   location: string | null;
 };
 
@@ -25,6 +27,7 @@ export default function MyCalendarScreen() {
   const [visibleMonth, setVisibleMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [plannerDate, setPlannerDate] = useState<string | null>(null);
 
   // The theme follows the month you're looking at
   const season = getSeason(visibleMonth);
@@ -34,14 +37,32 @@ export default function MyCalendarScreen() {
     setLoading(true);
     setError(null);
     const { data: userData } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from('rsvps')
-      .select('events(id, title, starts_at, location)')
-      .eq('user_id', userData.user?.id)
-      .eq('status', 'going');
+    const userId = userData.user?.id;
 
-    if (error) setError(error.message);
-    else setEvents((data ?? []).map((r: any) => r.events).filter(Boolean));
+    const [rsvpRes, ownRes] = await Promise.all([
+      supabase
+        .from('rsvps')
+        .select('events(id, title, starts_at, ends_at, location)')
+        .eq('user_id', userId)
+        .eq('status', 'going'),
+      supabase
+        .from('events')
+        .select('id, title, starts_at, ends_at, location')
+        .eq('created_by', userId),
+    ]);
+
+    const err = rsvpRes.error ?? ownRes.error;
+    if (err) {
+      setError(err.message);
+    } else {
+      const all = [
+        ...(rsvpRes.data ?? []).map((r: any) => r.events).filter(Boolean),
+        ...(ownRes.data ?? []),
+      ];
+      // Remove duplicates in case you RSVP'd to your own plan
+      const unique = Array.from(new Map(all.map((e) => [e.id, e])).values());
+      setEvents(unique);
+    }
     setLoading(false);
   }, []);
 
@@ -91,7 +112,10 @@ export default function MyCalendarScreen() {
           key={season}
           current={`${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, '0')}-01`}
           markedDates={marked}
-          onDayPress={(d) => setSelected(d.dateString)}
+          onDayPress={(d) => {
+            setSelected(d.dateString);
+            setPlannerDate(d.dateString);
+          }}
           onMonthChange={(m) => setVisibleMonth(new Date(m.year, m.month - 1, 1))}
           theme={{
             calendarBackground: theme.card,
@@ -128,9 +152,18 @@ export default function MyCalendarScreen() {
           </View>
         )}
       />
+      
+
+      <DayPlanner
+        date={plannerDate}
+        events={events.filter((e) => toDateKey(e.starts_at) === plannerDate)}
+        onClose={() => setPlannerDate(null)}
+        onSaved={load}
+      />
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 60 },
