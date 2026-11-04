@@ -24,12 +24,14 @@ export function DidThisHappen({ eventId, endsAt, startsAt, accent, onChange }: P
     const { error } = await supabase.from('completions')
       .insert({ event_id: eventId, activity_date: localDateKey(startsAt) });
     if (error) return Alert.alert('Could not confirm', error.message);
+    await supabase.from('wishes').update({ status: 'completed' }).eq('event_id', eventId);
     setDone(true); onChange?.();
   }
 
   async function undo() {
     const { error } = await supabase.from('completions').delete().eq('event_id', eventId);
     if (error) return Alert.alert('Could not undo', error.message);
+    await supabase.from('wishes').update({ status: 'scheduled' }).eq('event_id', eventId);  
     setDone(false); onChange?.();
   }
 

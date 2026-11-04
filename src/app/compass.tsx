@@ -139,7 +139,7 @@ export default function Compass() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#0006' }}>
           <View style={[styles.card, { backgroundColor: theme.card, margin: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: 20 }]}>
             <Text style={[styles.h2, { color: theme.text }]}>Plan: {planning?.title}</Text>
-            <TextInput value={planDate} onChangeText={setPlanDate} placeholder="YYYY-MM-DD" style={styles.input} />
+            <TextInput value={planDate} onChangeText={setPlanDate} placeholder="YYYY-MM-DD" placeholderTextColor="#888" style={[styles.input, { flex: 0, minHeight: 44 }]} />
             <View style={styles.row}>
               <Pressable onPress={() => setPlanHour(h => Math.max(7, h - 1))}><Text style={styles.h2}>−</Text></Pressable>
               <Text style={{ color: theme.text }}>Starts at {planHour % 12 || 12}{planHour < 12 ? ' AM' : ' PM'}</Text>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   rowText: { fontSize: 15, flex: 1 },
   remove: { color: '#b33', fontSize: 13 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, backgroundColor: '#fff' },
+  input: { flex: 1, borderWidth: 1, borderColor: '#f0e6e6', borderRadius: 10, padding: 10, backgroundColor: '#fff', color: '#222' },
   btn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10 },
   btnText: { color: '#fff', fontWeight: '600' },
   tabs: { flexDirection: 'row', gap: 8 },

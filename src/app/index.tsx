@@ -28,6 +28,8 @@ export default function MyCalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [plannerDate, setPlannerDate] = useState<string | null>(null);
+  const [doneDates, setDoneDates] = useState<Set<string>>(new Set());
+  const [wishDates, setWishDates] = useState<Set<string>>(new Set());
 
   // The theme follows the month you're looking at
   const season = getSeason(visibleMonth);
@@ -64,6 +66,14 @@ export default function MyCalendarScreen() {
       setEvents(unique);
     }
     setLoading(false);
+
+    const [c, w] = await Promise.all([
+      supabase.from('completions').select('event_id, activity_date'),
+      supabase.from('wishes').select('event_id').eq('status', 'completed'),
+    ]);
+    const wishEvents = new Set((w.data ?? []).map(x => x.event_id));
+    setDoneDates(new Set((c.data ?? []).map(x => x.activity_date)));
+    setWishDates(new Set((c.data ?? []).filter(x => wishEvents.has(x.event_id)).map(x => x.activity_date)));
   }, []);
 
   // Reload every time the tab is opened, so new RSVPs show up
@@ -98,6 +108,23 @@ export default function MyCalendarScreen() {
       </View>
     );
 
+  const glowMarks: Record<string, any> = { marked };
+doneDates.forEach(d => {
+  const wish = wishDates.has(d);
+  glowMarks[d] = {
+    ...(glowMarks[d] ?? {}),
+    customStyles: {
+      container: {
+        backgroundColor: wish ? '#f6d365' : theme.accent,
+        borderRadius: 18,
+        shadowColor: wish ? '#f6b400' : theme.accent,
+        shadowOpacity: 0.8, shadowRadius: 8, elevation: 6,
+      },
+      text: { color: '#fff', fontWeight: '700' },
+    },
+  };
+});
+  
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
@@ -111,7 +138,8 @@ export default function MyCalendarScreen() {
         <Calendar
           key={season}
           current={`${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, '0')}-01`}
-          markedDates={marked}
+          markedDates={glowMarks}
+          markingType="custom"
           onDayPress={(d) => {
             setSelected(d.dateString);
             setPlannerDate(d.dateString);
