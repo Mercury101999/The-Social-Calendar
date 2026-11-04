@@ -29,7 +29,7 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="Compass">
+      <NativeTabs.Trigger name="compass">
         <NativeTabs.Trigger.Label>Compass</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require("@/assets/images/tabIcons/explore.png")}
