@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Modal } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { getSeason, SeasonThemes } from '@/constants/seasons';
+
 
 type Budget = 'spend_nothing' | 'simple' | 'splurge';
 type Listing = { id: string; title: string; budget: Budget; location: string | null; price_note: string | null; source_url: string | null };
@@ -49,6 +50,33 @@ export default function Compass() {
     const { error } = await supabase.from('wishes').delete().eq('id', id);
     if (error) return Alert.alert('Could not remove wish', error.message);
     load();
+    }
+    
+  const [planning, setPlanning] = useState<Wish | null>(null);
+  const [planDate, setPlanDate] = useState('');
+  const [planHour, setPlanHour] = useState(12);
+
+  function openPlan(w: Wish) {
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    setPlanDate(`${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`);
+    setPlanHour(12);
+    setPlanning(w);
+  }
+
+  async function savePlan() {
+    if (!planning) return;
+    const start = new Date(`${planDate}T${String(planHour).padStart(2, '0')}:00:00`);
+    if (isNaN(start.getTime())) return Alert.alert('Check the date', 'Use the format YYYY-MM-DD.');
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const { data, error } = await supabase.from('events')
+      .insert({ title: planning.title, starts_at: start.toISOString(), ends_at: end.toISOString(), season: getSeason(start) })
+      .select('id').single();
+    if (error) return Alert.alert('Could not create plan', error.message);
+    const { error: wErr } = await supabase.from('wishes')
+      .update({ status: 'scheduled', event_id: data.id }).eq('id', planning.id);
+    if (wErr) return Alert.alert('Plan saved, but the wish was not linked', wErr.message);
+    setPlanning(null);
+    load();
   }
 
   const saved = new Set(wishes.map(w => w.listing_id).filter(Boolean));
@@ -63,10 +91,16 @@ export default function Compass() {
       <View style={[styles.card, { backgroundColor: theme.card }]}>
         <Text style={[styles.h2, { color: theme.text }]}>{theme.name} {year} Wishlist</Text>
         <Text style={styles.private}>Only you can see this</Text>
-        {wishes.length === 0 && <Text style={styles.empty}>No wishes yet. What do you want to do this season?</Text>}
-        {wishes.map(w => (
+              {wishes.length === 0 && <Text style={styles.empty}>No wishes yet. What do you want to do this season?</Text>}
+              
+            {wishes.map(w => (
           <View key={w.id} style={styles.row}>
-            <Text style={[styles.rowText, { color: theme.text }]}>☆ {w.title}</Text>
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              {w.status === 'scheduled' ? '✩ ' : '☆ '}{w.title}{w.status === 'scheduled' ? '  · Upcoming' : ''}
+            </Text>
+            {w.status === 'saved' && (
+              <Pressable onPress={() => openPlan(w)}><Text style={[styles.remove, { color: theme.accent }]}>Plan This</Text></Pressable>
+            )}
             <Pressable onPress={() => removeWish(w.id)}><Text style={styles.remove}>Remove</Text></Pressable>
           </View>
         ))}
@@ -100,6 +134,24 @@ export default function Compass() {
           </Pressable>
         </View>
       ))}
+          
+          <Modal visible={!!planning} transparent animationType="slide" onRequestClose={() => setPlanning(null)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#0006' }}>
+          <View style={[styles.card, { backgroundColor: theme.card, margin: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: 20 }]}>
+            <Text style={[styles.h2, { color: theme.text }]}>Plan: {planning?.title}</Text>
+            <TextInput value={planDate} onChangeText={setPlanDate} placeholder="YYYY-MM-DD" style={styles.input} />
+            <View style={styles.row}>
+              <Pressable onPress={() => setPlanHour(h => Math.max(7, h - 1))}><Text style={styles.h2}>−</Text></Pressable>
+              <Text style={{ color: theme.text }}>Starts at {planHour % 12 || 12}{planHour < 12 ? ' AM' : ' PM'}</Text>
+              <Pressable onPress={() => setPlanHour(h => Math.min(22, h + 1))}><Text style={styles.h2}>+</Text></Pressable>
+            </View>
+            <Pressable onPress={savePlan} style={[styles.btn, { backgroundColor: theme.accent }]}>
+              <Text style={[styles.btnText, { textAlign: 'center' }]}>Save to Calendar</Text>
+            </Pressable>
+            <Pressable onPress={() => setPlanning(null)}><Text style={[styles.remove, { textAlign: 'center' }]}>Cancel</Text></Pressable>
+          </View>
+        </View>
+      </Modal>      
     </ScrollView>
   );
 }
