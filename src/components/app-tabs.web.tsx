@@ -27,6 +27,9 @@ export default function AppTabs() {
           <TabTrigger name="events" href="/events" asChild>
             <TabButton>Events</TabButton>
           </TabTrigger>
+          <TabTrigger name="compass" href="/compass" asChild>
+            <TabButton>Compass</TabButton>
+          </TabTrigger>
           <TabTrigger name="connections" href="/connections" asChild>
             <TabButton>Connections</TabButton>
           </TabTrigger>

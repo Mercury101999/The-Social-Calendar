@@ -29,6 +29,14 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="Compass">
+        <NativeTabs.Trigger.Label>Compass</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require("@/assets/images/tabIcons/explore.png")}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="connections">
         <NativeTabs.Trigger.Label>Connections</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
@@ -52,7 +60,6 @@ export default function AppTabs() {
           renderingMode="template"
         />
       </NativeTabs.Trigger>
-      
     </NativeTabs>
   );
 }
