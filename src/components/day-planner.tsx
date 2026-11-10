@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { getSeason, SeasonThemes } from '@/constants/seasons';
 import { DidThisHappen } from './did-this-happen';
+import InvitePeople from './invite-people';
 
 export type PlannerEvent = {
   id: string;
@@ -10,6 +11,7 @@ export type PlannerEvent = {
   starts_at: string;
   ends_at: string | null;
   location: string | null;
+  created_by: string | null;
 };
 
 type Props = {
@@ -32,6 +34,11 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
   const [location, setLocation] = useState('');
   const [duration, setDuration] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
 
   if (!date) return null;
 
@@ -102,7 +109,10 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
                     inSlot.map((e) => (
                       <View key={e.id} style={[styles.plan, { backgroundColor: theme.card, borderLeftColor: theme.accent }]}>
                             <Text style={[styles.planTitle, { color: theme.text }]}>{e.title}</Text>
-                            <DidThisHappen eventId={e.id} startsAt={e.starts_at} endsAt={e.ends_at} accent={theme.accent} onChange={onSaved} />
+                        <DidThisHappen eventId={e.id} startsAt={e.starts_at} endsAt={e.ends_at} accent={theme.accent} onChange={onSaved} />
+                        {e.created_by === userId && (
+                          <InvitePeople eventId={e.id} accent={theme.accent} />
+                        )}
                         <Text style={styles.planMeta}>
                           {new Date(e.starts_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                           {e.ends_at
