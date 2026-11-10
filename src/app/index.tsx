@@ -12,6 +12,7 @@ type MyEvent = {
   starts_at: string;
   ends_at: string | null;
   location: string | null;
+  created_by: string | null;
 };
 
 function toDateKey(iso: string) {
@@ -44,12 +45,12 @@ export default function MyCalendarScreen() {
     const [rsvpRes, ownRes] = await Promise.all([
       supabase
         .from('rsvps')
-        .select('events(id, title, starts_at, ends_at, location)')
+        .select('events(id, title, starts_at, ends_at, location, created_by)')
         .eq('user_id', userId)
         .eq('status', 'going'),
       supabase
         .from('events')
-        .select('id, title, starts_at, ends_at, location')
+        .select('id, title, starts_at, ends_at, location, created_by')
         .eq('created_by', userId),
     ]);
 
@@ -107,23 +108,38 @@ export default function MyCalendarScreen() {
         <Text style={{ color: theme.text }}>Couldn't load your calendar: {error}</Text>
       </View>
     );
-
-  const glowMarks: Record<string, any> = { marked };
-doneDates.forEach(d => {
-  const wish = wishDates.has(d);
-  glowMarks[d] = {
-    ...(glowMarks[d] ?? {}),
+  
+  
+const glowMarks: Record<string, any> = {};
+for (const date of Object.keys(marked)) {
+  glowMarks[date] = {
+    customStyles: {
+      container: { borderWidth: 1.5, borderColor: theme.accent, borderRadius: 16 },
+    },
+  };
+}
+for (const date of doneDates) {
+  glowMarks[date] = {
     customStyles: {
       container: {
-        backgroundColor: wish ? '#f6d365' : theme.accent,
-        borderRadius: 18,
-        shadowColor: wish ? '#f6b400' : theme.accent,
-        shadowOpacity: 0.8, shadowRadius: 8, elevation: 6,
+        backgroundColor: theme.accent, borderRadius: 16,
+        shadowColor: theme.accent, shadowOpacity: 0.8, shadowRadius: 6, elevation: 4,
       },
       text: { color: '#fff', fontWeight: '700' },
     },
   };
-});
+}
+for (const date of wishDates) {
+  glowMarks[date] = {
+    customStyles: {
+      container: {
+        backgroundColor: '#f6d365', borderRadius: 16,
+        shadowColor: '#f6b400', shadowOpacity: 0.9, shadowRadius: 8, elevation: 5,
+      },
+      text: { color: '#5a3d00', fontWeight: '700' },
+    },
+  };
+}
   
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
