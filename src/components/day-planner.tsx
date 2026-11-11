@@ -70,6 +70,8 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
     setDuration(1);
   }
 
+  
+
   async function save() {
     if (formHour === null) return;
     if (!title.trim()) {
@@ -95,6 +97,20 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
     onSaved();
   }
 
+  function deletePlan(id: string, title: string) {
+    Alert.alert('Delete plan?', `"${title}" will be removed for everyone invited.`, [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Delete',
+      style: 'destructive',
+      onPress: async () => {
+        const { error } = await supabase.from('events').delete().eq('id', id);
+        if (error) Alert.alert("Couldn't delete", error.message);
+        else onSaved();
+      },
+    },
+    ]);
+  }
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
@@ -155,8 +171,12 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
                           accent={theme.accent}
                           onChange={onSaved}
                         />
-                        {e.created_by === userId && (
+                        {e.created_by === userId && ( <>
                           <InvitePeople eventId={e.id} accent={theme.accent} />
+                          <Pressable onPress={() => deletePlan(e.id, e.title)}>
+                            <Text style={{ color: '#c0392b', marginTop: 4 }}>Delete plan</Text>
+                            </Pressable>
+                            </>
                         )}
                         <Text style={styles.planMeta}>
                           {new Date(e.starts_at).toLocaleTimeString([], {
