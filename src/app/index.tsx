@@ -13,6 +13,8 @@ type MyEvent = {
   ends_at: string | null;
   location: string | null;
   created_by: string | null;
+  invite_status?: string;
+
 };
 
 function toDateKey(iso: string) {
@@ -54,13 +56,22 @@ export default function MyCalendarScreen() {
         .eq('created_by', userId),
     ]);
 
+    const { data: invited } = await supabase
+      .from('invitations')
+      .select('status, events(id, title, starts_at, ends_at, location, created_by)')
+      .eq('invitee_id', userId);
+
+    const invitedEvents: MyEvent[] = (invited ?? [])
+      .filter((r: any) => r.events)
+      .map((r: any) => ({ ...r.events, invite_status: r.status }));
+
     const err = rsvpRes.error ?? ownRes.error;
     if (err) {
       setError(err.message);
     } else {
       const all = [
         ...(rsvpRes.data ?? []).map((r: any) => r.events).filter(Boolean),
-        ...(ownRes.data ?? []),
+        ...(ownRes.data ?? []), ...invitedEvents
       ];
       // Remove duplicates in case you RSVP'd to your own plan
       const unique = Array.from(new Map(all.map((e) => [e.id, e])).values());
@@ -75,6 +86,9 @@ export default function MyCalendarScreen() {
     const wishEvents = new Set((w.data ?? []).map(x => x.event_id));
     setDoneDates(new Set((c.data ?? []).map(x => x.activity_date)));
     setWishDates(new Set((c.data ?? []).filter(x => wishEvents.has(x.event_id)).map(x => x.activity_date)));
+  
+  
+  
   }, []);
 
   // Reload every time the tab is opened, so new RSVPs show up

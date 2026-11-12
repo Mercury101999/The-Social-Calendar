@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet } from 'react-native';
-import { supabase } from '@/lib/supabase'; // ← swap for your real import line
+import { supabase } from '../../lib/supabase'; // ← swap for your real import line
 
 type Props = { eventId: string; status: string; accent: string; onChange: () => void };
 

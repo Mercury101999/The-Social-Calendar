@@ -13,6 +13,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { DidThisHappen } from "./did-this-happen";
 import InvitePeople from "./invite-people";
+import InviteResponse from './invite-response';
 
 export type PlannerEvent = {
   id: string;
@@ -21,6 +22,7 @@ export type PlannerEvent = {
   ends_at: string | null;
   location: string | null;
   created_by: string | null;
+  invite_status?: string;
 };
 
 type Props = {
@@ -178,6 +180,11 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
                             </Pressable>
                             </>
                         )}
+                        
+                        {e.invite_status && (
+                          <InviteResponse eventId={e.id} status={e.invite_status} accent={theme.accent} onChange={onSaved} />
+                        )}
+
                         <Text style={styles.planMeta}>
                           {new Date(e.starts_at).toLocaleTimeString([], {
                             hour: "numeric",
