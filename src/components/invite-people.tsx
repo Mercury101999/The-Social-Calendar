@@ -3,16 +3,23 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 type Friend = { id: string; display_name: string };
-type Invite = { invitee_id: string; status: string };
+type Invite = { invitee_id: string; status: string; suggested_start: string | null };
 
 const LABELS: Record<string, string> = {
   pending: 'Invited',
   in: "I'm in",
-  suggest: 'Suggested another time',
-  declined: 'Invited',
+  suggest: 'Suggested',
 };
 
-export default function InvitePeople({ eventId, accent }: { eventId: string; accent: string }) {
+export default function InvitePeople({
+  eventId,
+  accent,
+  onChange,
+}: {
+  eventId: string;
+  accent: string;
+  onChange?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -21,14 +28,14 @@ export default function InvitePeople({ eventId, accent }: { eventId: string; acc
   async function load() {
     const [f, i] = await Promise.all([
       supabase.rpc('my_friends'),
-      supabase.from('invitations').select('invitee_id, status').eq('event_id', eventId),
+      supabase.rpc('host_invitations', { eid: eventId }),
     ]);
     if (f.error || i.error) setError((f.error ?? i.error)!.message);
     setFriends(f.data ?? []);
     setInvites(i.data ?? []);
   }
 
-  useEffect(() => { if (open) load(); }, [open]);
+  useEffect(() => { load(); }, [eventId]);
 
   async function invite(friendId: string) {
     setError(null);
@@ -40,18 +47,43 @@ export default function InvitePeople({ eventId, accent }: { eventId: string; acc
   }
 
   async function uninvite(friendId: string) {
-    await supabase.from('invitations').delete()
-      .eq('event_id', eventId).eq('invitee_id', friendId);
+    setError(null);
+    const { error } = await supabase.rpc('remove_invite', { eid: eventId, person: friendId });
+    if (error) setError(error.message);
     load();
   }
 
-  if (!open) {
-    return (
-      <Pressable onPress={() => setOpen(true)}>
-        <Text style={[styles.link, { color: accent }]}>+ Invite people</Text>
-      </Pressable>
-    );
-  }
+  async function acceptTime(friendId: string) {
+    setError(null);
+    const { error } = await supabase.rpc('accept_suggestion', { eid: eventId, person: friendId });
+    if (error) setError(error.message);
+    load();
+    onChange?.(); // the plan moved, so reload the calendar
+    }
+    
+    if (!open) {
+        const suggestions = invites.filter((x) => x.status === 'suggest' && x.suggested_start);
+        return (
+            <View>
+                {suggestions.map((s) => {
+                    const name = friends.find((f) => f.id === s.invitee_id)?.display_name ?? 'Someone';
+                    return (
+                        <Pressable key={s.invitee_id} onPress={() => acceptTime(s.invitee_id)}>
+                            <Text style={[styles.link, { color: accent }]}>
+                                {name} suggested {new Date(s.suggested_start!).toLocaleString([], {
+                                    weekday: 'short', month: 'short', day: 'numeric',
+                                    hour: 'numeric', minute: '2-digit',
+                                })} · Move plan
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+                <Pressable onPress={() => setOpen(true)}>
+                    <Text style={[styles.link, { color: accent }]}>+ Invite people</Text>
+                </Pressable>
+            </View>
+        );
+    }
 
   return (
     <View style={styles.box}>
@@ -59,15 +91,27 @@ export default function InvitePeople({ eventId, accent }: { eventId: string; acc
       {friends.map((f) => {
         const inv = invites.find((x) => x.invitee_id === f.id);
         return (
-          <View key={f.id} style={styles.row}>
-            <Text style={styles.name}>{f.display_name}</Text>
-            {inv ? (
-              <Pressable onPress={() => uninvite(f.id)}>
-                <Text style={styles.muted}>{LABELS[inv.status]} · Remove</Text>
-              </Pressable>
-            ) : (
-              <Pressable onPress={() => invite(f.id)}>
-                <Text style={[styles.link, { color: accent }]}>Invite</Text>
+          <View key={f.id} style={styles.person}>
+            <View style={styles.row}>
+              <Text style={styles.name}>{f.display_name}</Text>
+              {inv ? (
+                <Pressable onPress={() => uninvite(f.id)}>
+                  <Text style={styles.muted}>{LABELS[inv.status] ?? 'Invited'} · Remove</Text>
+                </Pressable>
+              ) : (
+                <Pressable onPress={() => invite(f.id)}>
+                  <Text style={[styles.link, { color: accent }]}>Invite</Text>
+                </Pressable>
+              )}
+            </View>
+            {inv?.status === 'suggest' && inv.suggested_start && (
+              <Pressable onPress={() => acceptTime(f.id)}>
+                <Text style={[styles.link, { color: accent }]}>
+                  Move plan to {new Date(inv.suggested_start).toLocaleString([], {
+                    weekday: 'short', month: 'short', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit',
+                  })}
+                </Text>
               </Pressable>
             )}
           </View>
@@ -83,6 +127,7 @@ export default function InvitePeople({ eventId, accent }: { eventId: string; acc
 
 const styles = StyleSheet.create({
   box: { marginTop: 6, padding: 8, borderRadius: 8, backgroundColor: '#ffffff22', gap: 6 },
+  person: { gap: 2 },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   name: { fontSize: 15 },
   link: { fontWeight: '600', marginTop: 4 },

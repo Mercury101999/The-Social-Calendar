@@ -174,7 +174,7 @@ export default function DayPlanner({ date, events, onClose, onSaved }: Props) {
                           onChange={onSaved}
                         />
                         {e.created_by === userId && ( <>
-                          <InvitePeople eventId={e.id} accent={theme.accent} />
+                          <InvitePeople eventId={e.id} accent={theme.accent} onChange={onSaved} />
                           <Pressable onPress={() => deletePlan(e.id, e.title)}>
                             <Text style={{ color: '#c0392b', marginTop: 4 }}>Delete plan</Text>
                             </Pressable>
